@@ -6,7 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Response;
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 use App\Services\RewardService;
 
 class RewardController
@@ -19,7 +19,7 @@ class RewardController
             Response::error('unauthorized', 401, 401);
         }
 
-        $service = new RewardService(new JsonGameRepository());
+        $service = new RewardService(new MySqlGameRepository());
 
         Response::success([
             'reward' => $service->dailySign($userId),

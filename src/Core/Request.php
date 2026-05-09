@@ -19,8 +19,32 @@ class Request
 
     public static function header(string $name): string
     {
-        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
-        return $_SERVER[$key] ?? '';
+        $serverKey = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+
+        if (!empty($_SERVER[$serverKey])) {
+            return (string) $_SERVER[$serverKey];
+        }
+
+        if (strtolower($name) === 'authorization') {
+            if (!empty($_SERVER['Authorization'])) {
+                return (string) $_SERVER['Authorization'];
+            }
+
+            if (!empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+                return (string) $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+            }
+
+            if (function_exists('apache_request_headers')) {
+                $headers = apache_request_headers();
+                foreach ($headers as $key => $value) {
+                    if (strtolower($key) === 'authorization') {
+                        return (string) $value;
+                    }
+                }
+            }
+        }
+
+        return '';
     }
 
     public static function bearerToken(): string

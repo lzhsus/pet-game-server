@@ -4,72 +4,65 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 
 class PetService
 {
     private array $config;
 
-    public function __construct(private JsonGameRepository $repository)
+    public function __construct(private MySqlGameRepository $repository)
     {
         $this->config = require dirname(__DIR__) . '/Config/game.php';
     }
 
     public function getPet(int $userId): array
     {
-        $data = $this->repository->all();
-
-        foreach ($data['pets'] as $pet) {
-            if ((int) $pet['user_id'] === $userId) {
-                return $pet;
-            }
-        }
-
-        return $data['pets'][0];
+        return $this->repository->findPetByUserId($userId);
     }
 
     public function action(int $userId, string $action): array
     {
-        $data = $this->repository->all();
+        $pet = $this->getPet($userId);
 
-        foreach ($data['pets'] as $index => $pet) {
-            if ((int) $pet['user_id'] !== $userId) {
-                continue;
-            }
+        if (!$pet) {
+            return [];
+        }
 
-            $config = $this->config['pet_actions'][$action] ?? null;
+        $config = $this->config['pet_actions'][$action] ?? null;
 
-            if (!$config) {
-                return $pet;
-            }
-
-            $field = $config['field'];
-            $value = (int) $config['value'];
-
-            $pet[$field] += $value;
-            $pet[$field] = min($pet[$field], $this->config['max_status_value']);
-
-            $pet['exp'] += $this->config['pet_action_reward_exp'];
-
-            if ($pet['exp'] >= $this->config['pet_level_exp_base']) {
-                $pet['level'] += 1;
-                $pet['exp'] = 0;
-            }
-
-            $data['pets'][$index] = $pet;
-
-            foreach ($data['users'] as $userIndex => $user) {
-                if ((int) $user['id'] === $userId) {
-                    $user['coin'] += $this->config['pet_action_reward_coin'];
-                    $data['users'][$userIndex] = $user;
-                }
-            }
-
-            $this->repository->save($data);
-
+        if (!$config) {
             return $pet;
         }
 
-        return [];
+        $field = $config['field'];
+        if ($field === 'clean') {
+            $field = 'clean_value';
+        }
+
+        $newValue = min(
+            (int) $pet[$field] + (int) $config['value'],
+            (int) $this->config['max_status_value']
+        );
+
+        $newExp = (int) $pet['exp'] + (int) $this->config['pet_action_reward_exp'];
+        $newLevel = (int) $pet['level'];
+
+        if ($newExp >= (int) $this->config['pet_level_exp_base']) {
+            $newLevel += 1;
+            $newExp = 0;
+        }
+
+        $this->repository->updatePet((int) $pet['id'], [
+            $field => $newValue,
+            'exp' => $newExp,
+            'level' => $newLevel,
+        ]);
+
+        $user = $this->repository->findUser($userId);
+        $this->repository->updateUser($userId, [
+            'coin' => (int) $user['coin'] + (int) $this->config['pet_action_reward_coin'],
+        ]);
+
+        return $this->getPet($userId);
     }
 }

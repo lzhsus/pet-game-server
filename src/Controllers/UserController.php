@@ -6,14 +6,14 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Response;
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 use App\Services\UserService;
 
 class UserController
 {
     public function profile(): void
     {
-        $repository = new JsonGameRepository();
+        $repository = new MySqlGameRepository();
         $service = new UserService($repository);
 
         $userId = Auth::userId();

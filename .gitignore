@@ -1,0 +1,15 @@
+# local database config
+config/database.php
+
+# phpstorm
+.idea/
+
+# vscode
+.vscode/
+
+# logs
+*.log
+
+# system
+.DS_Store
+Thumbs.db

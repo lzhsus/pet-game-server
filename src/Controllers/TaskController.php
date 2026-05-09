@@ -7,14 +7,14 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Request;
 use App\Core\Response;
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 use App\Services\TaskService;
 
 class TaskController
 {
     private function service(): TaskService
     {
-        return new TaskService(new JsonGameRepository());
+        return new TaskService(new MySqlGameRepository());
     }
 
     public function list(): void

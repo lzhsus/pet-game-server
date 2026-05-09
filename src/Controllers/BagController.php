@@ -6,7 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Response;
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 use App\Services\BagService;
 
 class BagController
@@ -19,7 +19,7 @@ class BagController
             Response::error('unauthorized', 401, 401);
         }
 
-        $service = new BagService(new JsonGameRepository());
+        $service = new BagService(new MySqlGameRepository());
 
         Response::success([
             'items' => $service->list($userId),

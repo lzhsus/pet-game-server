@@ -1,11 +1,5 @@
--- Pet Game Server database schema
--- MySQL 8.x / phpstudy_pro compatible
-
-CREATE DATABASE IF NOT EXISTS `pet_game`
-  DEFAULT CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE `pet_game`;
+-- Pet Game Server table schema
+-- Import this file after selecting your existing database, for example `weapp`.
 
 DROP TABLE IF EXISTS `user_sign_logs`;
 DROP TABLE IF EXISTS `user_tasks`;

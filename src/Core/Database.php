@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core;
 
 use PDO;
+use RuntimeException;
 
 class Database
 {
@@ -16,7 +17,13 @@ class Database
             return self::$connection;
         }
 
-        $config = self::config();
+        $configFile = dirname(__DIR__, 2) . '/config/database.php';
+
+        if (!file_exists($configFile)) {
+            throw new RuntimeException('config/database.php not found');
+        }
+
+        $config = require $configFile;
 
         $dsn = sprintf(
             'mysql:host=%s;port=%s;dbname=%s;charset=%s',
@@ -37,23 +44,5 @@ class Database
         );
 
         return self::$connection;
-    }
-
-    private static function config(): array
-    {
-        $configFile = dirname(__DIR__, 2) . '/config/database.php';
-
-        if (file_exists($configFile)) {
-            return require $configFile;
-        }
-
-        return [
-            'host' => '127.0.0.1',
-            'port' => 3306,
-            'database' => 'weapp',
-            'username' => 'admin',
-            'password' => 'admin123',
-            'charset' => 'utf8mb4',
-        ];
     }
 }

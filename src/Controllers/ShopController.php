@@ -7,14 +7,14 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Request;
 use App\Core\Response;
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 use App\Services\ShopService;
 
 class ShopController
 {
     private function service(): ShopService
     {
-        return new ShopService(new JsonGameRepository());
+        return new ShopService(new MySqlGameRepository());
     }
 
     public function list(): void

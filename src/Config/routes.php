@@ -7,8 +7,11 @@ use App\Controllers\TaskController;
 use App\Controllers\BagController;
 use App\Controllers\ShopController;
 use App\Controllers\RewardController;
+use App\Controllers\PingController;
 
 return function ($router) {
+    $router->get('/api/ping', [PingController::class, 'index']);
+
     $router->post('/api/auth/login', [AuthController::class, 'login']);
 
     $router->get('/api/user/profile', [UserController::class, 'profile']);

@@ -32,7 +32,7 @@ copy config\database.example.php config\database.php
 return [
     'host' => '127.0.0.1',
     'port' => 3306,
-    'database' => 'pet_game',
+    'database' => 'weapp',
     'username' => 'admin',
     'password' => 'admin123',
     'charset' => 'utf8mb4',

@@ -4,32 +4,42 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 
 class RewardService
 {
-    public function __construct(private JsonGameRepository $repository)
+    public function __construct(private MySqlGameRepository $repository)
     {
     }
 
     public function dailySign(int $userId): array
     {
-        $data = $this->repository->all();
+        $coin = 50;
+        $diamond = 1;
+        $today = date('Y-m-d');
 
-        foreach ($data['users'] as $index => $user) {
-            if ((int) $user['id'] === $userId) {
-                $data['users'][$index]['coin'] += 50;
-                $data['users'][$index]['diamond'] += 1;
+        $created = $this->repository->addSignLog($userId, $today, $coin, $diamond);
 
-                $this->repository->save($data);
-
-                return [
-                    'coin' => 50,
-                    'diamond' => 1,
-                ];
-            }
+        if (!$created) {
+            return [
+                'received' => false,
+                'message' => '今日已签到',
+                'coin' => 0,
+                'diamond' => 0,
+            ];
         }
 
-        return [];
+        $user = $this->repository->findUser($userId);
+        $this->repository->updateUser($userId, [
+            'coin' => (int) $user['coin'] + $coin,
+            'diamond' => (int) $user['diamond'] + $diamond,
+        ]);
+
+        return [
+            'received' => true,
+            'message' => '签到成功',
+            'coin' => $coin,
+            'diamond' => $diamond,
+        ];
     }
 }

@@ -4,42 +4,28 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 
 class UserService
 {
-    public function __construct(private JsonGameRepository $repository)
+    public function __construct(private MySqlGameRepository $repository)
     {
     }
 
     public function getUser(int $userId): array
     {
-        $data = $this->repository->all();
-
-        foreach ($data['users'] as $user) {
-            if ((int) $user['id'] === $userId) {
-                return $user;
-            }
-        }
-
-        return $data['users'][0];
+        return $this->repository->findUser($userId);
     }
 
-    public function saveUser(array $user): array
+    public function addCoin(int $userId, int $coin): array
     {
-        $data = $this->repository->all();
+        $user = $this->getUser($userId);
+        $newCoin = (int) ($user['coin'] ?? 0) + $coin;
 
-        foreach ($data['users'] as $index => $item) {
-            if ((int) $item['id'] === (int) $user['id']) {
-                $data['users'][$index] = $user;
-                $this->repository->save($data);
-                return $user;
-            }
-        }
+        $this->repository->updateUser($userId, [
+            'coin' => $newCoin,
+        ]);
 
-        $data['users'][] = $user;
-        $this->repository->save($data);
-
-        return $user;
+        return $this->getUser($userId);
     }
 }

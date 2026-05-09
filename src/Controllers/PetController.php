@@ -6,7 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Response;
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 use App\Services\PetService;
 use App\Services\UserService;
 
@@ -14,7 +14,7 @@ class PetController
 {
     private function services(): array
     {
-        $repository = new JsonGameRepository();
+        $repository = new MySqlGameRepository();
         return [new PetService($repository), new UserService($repository)];
     }
 

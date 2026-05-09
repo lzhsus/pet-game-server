@@ -4,21 +4,17 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Repositories\JsonGameRepository;
+use App\Repositories\MySqlGameRepository;
 
 class ShopService
 {
-    public function __construct(private JsonGameRepository $repository)
+    public function __construct(private MySqlGameRepository $repository)
     {
     }
 
     public function list(): array
     {
-        return [
-            ['id' => 101, 'name' => '高级猫粮', 'price_coin' => 30, 'type' => 'food'],
-            ['id' => 102, 'name' => '香氛沐浴露', 'price_coin' => 40, 'type' => 'clean'],
-            ['id' => 103, 'name' => '逗猫棒', 'price_coin' => 50, 'type' => 'toy'],
-        ];
+        return $this->repository->listShopGoods();
     }
 
     public function buy(int $userId, int $goodsId): array
@@ -28,6 +24,7 @@ class ShopService
         foreach ($this->list() as $item) {
             if ((int) $item['id'] === $goodsId) {
                 $goods = $item;
+                break;
             }
         }
 
@@ -35,30 +32,32 @@ class ShopService
             return ['success' => false, 'message' => '商品不存在'];
         }
 
-        $data = $this->repository->all();
+        $user = $this->repository->findUser($userId);
 
-        foreach ($data['users'] as $userIndex => $user) {
-            if ((int) $user['id'] !== $userId) {
-                continue;
-            }
-
-            if ((int) $user['coin'] < (int) $goods['price_coin']) {
-                return ['success' => false, 'message' => '金币不足'];
-            }
-
-            $data['users'][$userIndex]['coin'] -= (int) $goods['price_coin'];
-            $data['items'][] = [
-                'id' => time(),
-                'user_id' => $userId,
-                'name' => $goods['name'],
-                'count' => 1,
-            ];
-
-            $this->repository->save($data);
-
-            return ['success' => true, 'message' => '购买成功', 'goods' => $goods];
+        if (!$user) {
+            return ['success' => false, 'message' => '用户不存在'];
         }
 
-        return ['success' => false, 'message' => '用户不存在'];
+        if ((int) $user['coin'] < (int) $goods['price_coin']) {
+            return ['success' => false, 'message' => '金币不足'];
+        }
+
+        $this->repository->updateUser($userId, [
+            'coin' => (int) $user['coin'] - (int) $goods['price_coin'],
+        ]);
+
+        $this->repository->addBagItem(
+            $userId,
+            (int) $goods['id'],
+            (string) $goods['goods_name'],
+            (string) $goods['goods_type'],
+            1
+        );
+
+        return [
+            'success' => true,
+            'message' => '购买成功',
+            'goods' => $goods,
+        ];
     }
 }

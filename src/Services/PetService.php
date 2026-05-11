@@ -17,7 +17,13 @@ class PetService
 
     public function getPet(int $userId): array
     {
-        return $this->repository->findPetByUserId($userId);
+        $pet = $this->repository->findPetByUserId($userId);
+
+        if (!$pet) {
+            return [];
+        }
+
+        return $this->applyStatusDecay($pet);
     }
 
     public function action(int $userId, string $action): array
@@ -103,5 +109,40 @@ class PetService
         ]);
 
         return $this->getPet($userId);
+    }
+
+    private function applyStatusDecay(array $pet): array
+    {
+        $updatedAt = strtotime((string) ($pet['updated_at'] ?? ''));
+
+        if (!$updatedAt) {
+            return $pet;
+        }
+
+        $elapsedSeconds = time() - $updatedAt;
+        $decayMinutes = (int) ($this->config['status_decay_minutes'] ?? 1);
+        $elapsedUnits = intdiv(max($elapsedSeconds, 0), max($decayMinutes, 1) * 60);
+
+        if ($elapsedUnits <= 0) {
+            return $pet;
+        }
+
+        $decayValues = $this->config['status_decay_values'] ?? [];
+        $updates = [];
+
+        foreach ($decayValues as $field => $value) {
+            $updates[$field] = max(
+                (int) $pet[$field] - ((int) $value * $elapsedUnits),
+                0
+            );
+        }
+
+        if (!$updates) {
+            return $pet;
+        }
+
+        $this->repository->updatePet((int) $pet['id'], $updates);
+
+        return array_merge($pet, $updates);
     }
 }

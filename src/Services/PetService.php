@@ -34,6 +34,50 @@ class PetService
             return $pet;
         }
 
+        $consumeMap = [
+            'feed' => [
+                'item_type' => 'food',
+                'coin_cost' => 10,
+            ],
+            'bath' => [
+                'item_type' => 'clean',
+                'coin_cost' => 15,
+            ],
+            'play' => [
+                'item_type' => 'toy',
+                'coin_cost' => 20,
+            ],
+        ];
+
+        $consumeConfig = $consumeMap[$action] ?? null;
+        $user = $this->repository->findUser($userId);
+
+        if ($consumeConfig) {
+            $bagItem = $this->repository->findUsableBagItemByType(
+                $userId,
+                $consumeConfig['item_type']
+            );
+
+            if ($bagItem) {
+                $this->repository->consumeBagItem((int) $bagItem['id']);
+            } else {
+                $newCoin = (int) $user['coin'] - (int) $consumeConfig['coin_cost'];
+
+                if ($newCoin < 0) {
+                    return [
+                        'error' => true,
+                        'message' => '金币不足',
+                    ];
+                }
+
+                $this->repository->updateUser($userId, [
+                    'coin' => $newCoin,
+                ]);
+
+                $user['coin'] = $newCoin;
+            }
+        }
+
         $field = $config['field'];
         if ($field === 'clean') {
             $field = 'clean_value';
@@ -56,11 +100,6 @@ class PetService
             $field => $newValue,
             'exp' => $newExp,
             'level' => $newLevel,
-        ]);
-
-        $user = $this->repository->findUser($userId);
-        $this->repository->updateUser($userId, [
-            'coin' => (int) $user['coin'] + (int) $this->config['pet_action_reward_coin'],
         ]);
 
         return $this->getPet($userId);

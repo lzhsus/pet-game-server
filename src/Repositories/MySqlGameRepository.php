@@ -75,6 +75,25 @@ class MySqlGameRepository
         return $stmt->fetchAll();
     }
 
+    public function findUsableBagItemByType(int $userId, string $type): array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM bag_items WHERE user_id = :user_id AND item_type = :item_type AND item_count > 0 ORDER BY id ASC LIMIT 1');
+        $stmt->execute([
+            'user_id' => $userId,
+            'item_type' => $type,
+        ]);
+        return $stmt->fetch() ?: [];
+    }
+
+    public function consumeBagItem(int $bagItemId, int $count = 1): void
+    {
+        $stmt = $this->db->prepare('UPDATE bag_items SET item_count = GREATEST(item_count - :count, 0) WHERE id = :id');
+        $stmt->execute([
+            'id' => $bagItemId,
+            'count' => $count,
+        ]);
+    }
+
     public function listShopGoods(): array
     {
         $stmt = $this->db->query('SELECT * FROM shop_goods WHERE status = 1 ORDER BY id ASC');

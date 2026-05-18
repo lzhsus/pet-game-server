@@ -20,7 +20,6 @@ class TaskService
     public function receive(int $userId, int $taskId): array
     {
         $tasks = $this->repository->listTasks($userId);
-        $rewardCoin = 0;
         $matchedTask = null;
 
         foreach ($tasks as $task) {
@@ -55,6 +54,8 @@ class TaskService
         }
 
         $rewardCoin = (int) $matchedTask['reward_coin'];
+        $rewardExp = (int) $matchedTask['reward_exp'];
+
         $this->repository->saveUserTask(
             $userId,
             $taskId,
@@ -62,15 +63,18 @@ class TaskService
             2
         );
 
-        if ($rewardCoin > 0) {
-            $user = $this->repository->findUser($userId);
+        $user = $this->repository->findUser($userId);
+        if ($user) {
             $this->repository->updateUser($userId, [
                 'coin' => (int) $user['coin'] + $rewardCoin,
+                'exp' => (int) $user['exp'] + $rewardExp,
             ]);
         }
 
         return [
             'reward_coin' => $rewardCoin,
+            'reward_exp' => $rewardExp,
+            'user' => $this->repository->findUser($userId),
             'tasks' => $this->list($userId),
         ];
     }

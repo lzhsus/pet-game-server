@@ -35,6 +35,10 @@ class RewardService
             'diamond' => (int) $user['diamond'] + $diamond,
         ]);
 
+        // 签到成功后推进每日签到任务。
+        // tasks.task_type 需要配置为 sign。
+        $this->repository->incrementTasksByType($userId, 'sign');
+
         return [
             'received' => true,
             'message' => '签到成功',

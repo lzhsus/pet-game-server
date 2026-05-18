@@ -23,6 +23,21 @@ class MySqlGameRepository
         return $stmt->fetch() ?: [];
     }
 
+    public function createDefaultUser(int $userId = 1): array
+    {
+        $stmt = $this->db->prepare(
+            'INSERT INTO pet_users (id, nickname, level, exp, coin, diamond) VALUES (:id, :nickname, 1, 0, 1000, 100)
+             ON DUPLICATE KEY UPDATE id = id'
+        );
+
+        $stmt->execute([
+            'id' => $userId,
+            'nickname' => '玩家' . str_pad((string) $userId, 3, '0', STR_PAD_LEFT),
+        ]);
+
+        return $this->findUser($userId);
+    }
+
     public function updateUser(int $userId, array $data): void
     {
         $fields = [];
@@ -47,6 +62,22 @@ class MySqlGameRepository
         $stmt = $this->db->prepare('SELECT * FROM pet_pets WHERE user_id = :user_id LIMIT 1');
         $stmt->execute(['user_id' => $userId]);
         return $stmt->fetch() ?: [];
+    }
+
+    public function createDefaultPet(int $userId): array
+    {
+        $stmt = $this->db->prepare(
+            'INSERT INTO pet_pets (user_id, name, type, level, exp, hunger, clean_value, mood) VALUES (:user_id, :name, :type, 1, 0, 60, 60, 60)
+             ON DUPLICATE KEY UPDATE user_id = user_id'
+        );
+
+        $stmt->execute([
+            'user_id' => $userId,
+            'name' => '布丁',
+            'type' => 'cat',
+        ]);
+
+        return $this->findPetByUserId($userId);
     }
 
     public function updatePet(int $petId, array $data): void

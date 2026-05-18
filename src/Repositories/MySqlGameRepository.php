@@ -18,7 +18,7 @@ class MySqlGameRepository
 
     public function findUser(int $userId): array
     {
-        $stmt = $this->db->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
+        $stmt = $this->db->prepare('SELECT * FROM pet_users WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $userId]);
         return $stmt->fetch() ?: [];
     }
@@ -37,14 +37,14 @@ class MySqlGameRepository
             return;
         }
 
-        $sql = 'UPDATE users SET ' . implode(', ', $fields) . ' WHERE id = :id';
+        $sql = 'UPDATE pet_users SET ' . implode(', ', $fields) . ' WHERE id = :id';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
     }
 
     public function findPetByUserId(int $userId): array
     {
-        $stmt = $this->db->prepare('SELECT * FROM pets WHERE user_id = :user_id LIMIT 1');
+        $stmt = $this->db->prepare('SELECT * FROM pet_pets WHERE user_id = :user_id LIMIT 1');
         $stmt->execute(['user_id' => $userId]);
         return $stmt->fetch() ?: [];
     }
@@ -63,21 +63,21 @@ class MySqlGameRepository
             return;
         }
 
-        $sql = 'UPDATE pets SET ' . implode(', ', $fields) . ' WHERE id = :id';
+        $sql = 'UPDATE pet_pets SET ' . implode(', ', $fields) . ' WHERE id = :id';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
     }
 
     public function listBagItems(int $userId): array
     {
-        $stmt = $this->db->prepare('SELECT * FROM bag_items WHERE user_id = :user_id ORDER BY id DESC');
+        $stmt = $this->db->prepare('SELECT * FROM pet_bag_items WHERE user_id = :user_id ORDER BY id DESC');
         $stmt->execute(['user_id' => $userId]);
         return $stmt->fetchAll();
     }
 
     public function findUsableBagItemByType(int $userId, string $type): array
     {
-        $stmt = $this->db->prepare('SELECT * FROM bag_items WHERE user_id = :user_id AND item_type = :item_type AND item_count > 0 ORDER BY id ASC LIMIT 1');
+        $stmt = $this->db->prepare('SELECT * FROM pet_bag_items WHERE user_id = :user_id AND item_type = :item_type AND item_count > 0 ORDER BY id ASC LIMIT 1');
         $stmt->execute([
             'user_id' => $userId,
             'item_type' => $type,
@@ -87,7 +87,7 @@ class MySqlGameRepository
 
     public function consumeBagItem(int $bagItemId, int $count = 1): void
     {
-        $stmt = $this->db->prepare('UPDATE bag_items SET item_count = GREATEST(item_count - :count, 0) WHERE id = :id');
+        $stmt = $this->db->prepare('UPDATE pet_bag_items SET item_count = GREATEST(item_count - :count, 0) WHERE id = :id');
         $stmt->execute([
             'id' => $bagItemId,
             'count' => $count,
@@ -96,14 +96,14 @@ class MySqlGameRepository
 
     public function listShopGoods(): array
     {
-        $stmt = $this->db->query('SELECT * FROM shop_goods WHERE status = 1 ORDER BY id ASC');
+        $stmt = $this->db->query('SELECT * FROM pet_shop_goods WHERE status = 1 ORDER BY sort ASC, id ASC');
         return $stmt->fetchAll();
     }
 
     public function addBagItem(int $userId, int $itemId, string $name, string $type, int $count = 1): void
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO bag_items (user_id, item_id, item_name, item_type, item_count) VALUES (:user_id, :item_id, :item_name, :item_type, :item_count)'
+            'INSERT INTO pet_bag_items (user_id, item_id, item_name, item_type, item_count) VALUES (:user_id, :item_id, :item_name, :item_type, :item_count)'
         );
 
         $stmt->execute([
@@ -117,27 +117,33 @@ class MySqlGameRepository
 
     public function listTasks(int $userId): array
     {
+        $today = date('Y-m-d');
         $sql = 'SELECT t.id, t.title, t.task_type, t.target_value, t.reward_coin, t.reward_exp, COALESCE(ut.progress, 0) AS progress, COALESCE(ut.status, 0) AS status
-                FROM tasks t
-                LEFT JOIN user_tasks ut ON ut.task_id = t.id AND ut.user_id = :user_id
+                FROM pet_tasks t
+                LEFT JOIN pet_user_tasks ut ON ut.task_id = t.id AND ut.user_id = :user_id AND ut.task_date = :task_date
                 WHERE t.status = 1
-                ORDER BY t.id ASC';
+                ORDER BY t.sort ASC, t.id ASC';
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(['user_id' => $userId]);
+        $stmt->execute([
+            'user_id' => $userId,
+            'task_date' => $today,
+        ]);
         return $stmt->fetchAll();
     }
 
     public function saveUserTask(int $userId, int $taskId, int $progress, int $status): void
     {
-        $sql = 'INSERT INTO user_tasks (user_id, task_id, progress, status)
-                VALUES (:user_id, :task_id, :progress, :status)
+        $today = date('Y-m-d');
+        $sql = 'INSERT INTO pet_user_tasks (user_id, task_id, task_date, progress, status)
+                VALUES (:user_id, :task_id, :task_date, :progress, :status)
                 ON DUPLICATE KEY UPDATE progress = VALUES(progress), status = VALUES(status)';
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'user_id' => $userId,
             'task_id' => $taskId,
+            'task_date' => $today,
             'progress' => $progress,
             'status' => $status,
         ]);
@@ -167,7 +173,7 @@ class MySqlGameRepository
     public function addSignLog(int $userId, string $date, int $coin, int $diamond): bool
     {
         $stmt = $this->db->prepare(
-            'INSERT IGNORE INTO user_sign_logs (user_id, sign_date, reward_coin, reward_diamond) VALUES (:user_id, :sign_date, :reward_coin, :reward_diamond)'
+            'INSERT IGNORE INTO pet_user_sign_logs (user_id, sign_date, reward_coin, reward_diamond) VALUES (:user_id, :sign_date, :reward_coin, :reward_diamond)'
         );
 
         $stmt->execute([

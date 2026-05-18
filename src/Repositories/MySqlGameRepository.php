@@ -216,4 +216,19 @@ class MySqlGameRepository
 
         return $stmt->rowCount() > 0;
     }
+
+    public function listSignLogsByDateRange(int $userId, string $startDate, string $endDate): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT * FROM pet_user_sign_logs WHERE user_id = :user_id AND sign_date BETWEEN :start_date AND :end_date ORDER BY sign_date ASC'
+        );
+
+        $stmt->execute([
+            'user_id' => $userId,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+        ]);
+
+        return $stmt->fetchAll();
+    }
 }

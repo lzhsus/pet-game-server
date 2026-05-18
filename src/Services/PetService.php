@@ -17,10 +17,15 @@ class PetService
 
     public function getPet(int $userId): array
     {
+        $user = $this->repository->findUser($userId);
+        if (!$user) {
+            $this->repository->createDefaultUser($userId);
+        }
+
         $pet = $this->repository->findPetByUserId($userId);
 
         if (!$pet) {
-            return [];
+            $pet = $this->repository->createDefaultPet($userId);
         }
 
         return $this->applyStatusDecay($pet);
@@ -28,10 +33,18 @@ class PetService
 
     public function action(int $userId, string $action): array
     {
+        $user = $this->repository->findUser($userId);
+        if (!$user) {
+            $user = $this->repository->createDefaultUser($userId);
+        }
+
         $pet = $this->getPet($userId);
 
         if (!$pet) {
-            return [];
+            return [
+                'error' => true,
+                'message' => '宠物初始化失败',
+            ];
         }
 
         $config = $this->config['pet_actions'][$action] ?? null;
@@ -56,7 +69,6 @@ class PetService
         ];
 
         $consumeConfig = $consumeMap[$action] ?? null;
-        $user = $this->repository->findUser($userId);
 
         if ($consumeConfig) {
             $bagItem = $this->repository->findUsableBagItemByType(
@@ -96,10 +108,11 @@ class PetService
 
         $newExp = (int) $pet['exp'] + (int) $this->config['pet_action_reward_exp'];
         $newLevel = (int) $pet['level'];
+        $levelExpBase = max((int) $this->config['pet_level_exp_base'], 1);
 
-        if ($newExp >= (int) $this->config['pet_level_exp_base']) {
+        while ($newExp >= $levelExpBase) {
             $newLevel += 1;
-            $newExp = 0;
+            $newExp -= $levelExpBase;
         }
 
         $this->repository->updatePet((int) $pet['id'], [
@@ -109,7 +122,7 @@ class PetService
         ]);
 
         // 宠物操作成功后，同步推进每日任务进度。
-        // feed / bath / play 必须和 tasks.task_type 保持一致。
+        // feed / bath / play 必须和 pet_tasks.task_type 保持一致。
         $this->repository->incrementTasksByType($userId, $action);
 
         return $this->getPet($userId);

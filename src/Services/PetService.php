@@ -108,6 +108,10 @@ class PetService
             'level' => $newLevel,
         ]);
 
+        // 宠物操作成功后，同步推进每日任务进度。
+        // feed / bath / play 必须和 tasks.task_type 保持一致。
+        $this->repository->incrementTasksByType($userId, $action);
+
         return $this->getPet($userId);
     }
 

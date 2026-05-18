@@ -25,4 +25,19 @@ class RewardController
             'reward' => $service->dailySign($userId),
         ]);
     }
+
+    public function week(): void
+    {
+        $userId = Auth::userId();
+
+        if ($userId <= 0) {
+            Response::error('unauthorized', 401, 401);
+        }
+
+        $service = new RewardService(new MySqlGameRepository());
+
+        Response::success([
+            'week' => $service->week($userId),
+        ]);
+    }
 }

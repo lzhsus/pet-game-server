@@ -67,7 +67,23 @@ class TaskService
         if ($user) {
             $this->repository->updateUser($userId, [
                 'coin' => (int) $user['coin'] + $rewardCoin,
-                'exp' => (int) $user['exp'] + $rewardExp,
+            ]);
+        }
+
+        $pet = $this->repository->findPetByUserId($userId);
+        if ($pet && $rewardExp > 0) {
+            $level = (int) $pet['level'];
+            $exp = (int) $pet['exp'] + $rewardExp;
+            $levelExpBase = 100;
+
+            while ($exp >= $levelExpBase) {
+                $level += 1;
+                $exp -= $levelExpBase;
+            }
+
+            $this->repository->updatePet((int) $pet['id'], [
+                'level' => $level,
+                'exp' => $exp,
             ]);
         }
 
@@ -75,6 +91,7 @@ class TaskService
             'reward_coin' => $rewardCoin,
             'reward_exp' => $rewardExp,
             'user' => $this->repository->findUser($userId),
+            'pet' => $this->repository->findPetByUserId($userId),
             'tasks' => $this->list($userId),
         ];
     }

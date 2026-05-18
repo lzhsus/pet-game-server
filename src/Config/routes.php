@@ -30,4 +30,5 @@ return function ($router) {
     $router->post('/api/shop/buy', [ShopController::class, 'buy']);
 
     $router->post('/api/reward/sign', [RewardController::class, 'dailySign']);
+    $router->get('/api/reward/sign/week', [RewardController::class, 'week']);
 };

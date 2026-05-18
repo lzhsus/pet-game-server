@@ -21,18 +21,46 @@ class TaskService
     {
         $tasks = $this->repository->listTasks($userId);
         $rewardCoin = 0;
+        $matchedTask = null;
 
         foreach ($tasks as $task) {
             if ((int) $task['id'] === $taskId) {
-                $rewardCoin = (int) $task['reward_coin'];
-                $this->repository->saveUserTask(
-                    $userId,
-                    $taskId,
-                    (int) $task['target_value'],
-                    1
-                );
+                $matchedTask = $task;
+                break;
             }
         }
+
+        if (!$matchedTask) {
+            return [
+                'error' => true,
+                'message' => '任务不存在',
+                'tasks' => $this->list($userId),
+            ];
+        }
+
+        if ((int) $matchedTask['status'] === 2) {
+            return [
+                'error' => true,
+                'message' => '奖励已领取',
+                'tasks' => $this->list($userId),
+            ];
+        }
+
+        if ((int) $matchedTask['progress'] < (int) $matchedTask['target_value']) {
+            return [
+                'error' => true,
+                'message' => '任务未完成',
+                'tasks' => $this->list($userId),
+            ];
+        }
+
+        $rewardCoin = (int) $matchedTask['reward_coin'];
+        $this->repository->saveUserTask(
+            $userId,
+            $taskId,
+            (int) $matchedTask['target_value'],
+            2
+        );
 
         if ($rewardCoin > 0) {
             $user = $this->repository->findUser($userId);

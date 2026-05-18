@@ -56,8 +56,14 @@ class PetController
             Response::error('unauthorized', 401, 401);
         }
 
+        $pet = $petService->action($userId, $type);
+
+        if (($pet['error'] ?? false) === true) {
+            Response::error((string) ($pet['message'] ?? '操作失败'), 400, 200);
+        }
+
         Response::success([
-            'pet' => $petService->action($userId, $type),
+            'pet' => $pet,
             'user' => $userService->getUser($userId),
         ]);
     }

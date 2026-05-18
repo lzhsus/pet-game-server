@@ -143,6 +143,28 @@ class MySqlGameRepository
         ]);
     }
 
+    public function incrementTasksByType(int $userId, string $taskType, int $step = 1): void
+    {
+        $sql = 'INSERT INTO user_tasks (user_id, task_id, progress, status)
+                SELECT :user_id, t.id, LEAST(:step, t.target_value), IF(:step >= t.target_value, 1, 0)
+                FROM tasks t
+                LEFT JOIN user_tasks ut ON ut.user_id = :user_id_lookup AND ut.task_id = t.id
+                WHERE t.status = 1
+                  AND t.task_type = :task_type
+                  AND COALESCE(ut.status, 0) < 1
+                ON DUPLICATE KEY UPDATE
+                    progress = LEAST(user_tasks.progress + VALUES(progress), (SELECT target_value FROM tasks WHERE id = user_tasks.task_id)),
+                    status = IF(progress >= (SELECT target_value FROM tasks WHERE id = user_tasks.task_id), 1, status)';
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'user_id' => $userId,
+            'user_id_lookup' => $userId,
+            'task_type' => $taskType,
+            'step' => $step,
+        ]);
+    }
+
     public function addSignLog(int $userId, string $date, int $coin, int $diamond): bool
     {
         $stmt = $this->db->prepare(

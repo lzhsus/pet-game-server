@@ -26,7 +26,7 @@ class MySqlGameRepository
     public function createDefaultUser(int $userId = 1): array
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO pet_users (id, nickname, level, exp, coin, diamond) VALUES (:id, :nickname, 1, 0, 1000, 100)
+            'INSERT INTO pet_users (id, nickname, coin, diamond) VALUES (:id, :nickname, 1000, 100)
              ON DUPLICATE KEY UPDATE id = id'
         );
 

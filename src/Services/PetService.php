@@ -141,7 +141,20 @@ class PetService
         $this->repository->incrementTasksByType($userId, $action);
 
         // 重新读取宠物信息，让前端拿到最新状态、等级和经验。
-        return $this->getPet($userId);
+        $latestPet = $this->getPet($userId);
+
+        return array_merge($latestPet, [
+            'message' => $this->getUsedItemMessage($action, (string) $bagItem['item_name']),
+            'used_item' => [
+                'id' => (int) $bagItem['id'],
+                'name' => (string) $bagItem['item_name'],
+                'type' => (string) $bagItem['item_type'],
+                'hunger_value' => (int) ($bagItem['hunger_value'] ?? 0),
+                'clean_value' => (int) ($bagItem['clean_value'] ?? 0),
+                'mood_value' => (int) ($bagItem['mood_value'] ?? 0),
+                'exp_value' => (int) ($bagItem['exp_value'] ?? 0),
+            ],
+        ]);
     }
 
     private function getMissingItemMessage(string $action): string
@@ -159,6 +172,23 @@ class PetService
         }
 
         return '背包里没有可用物品';
+    }
+
+    private function getUsedItemMessage(string $action, string $itemName): string
+    {
+        if ($action === 'feed') {
+            return '使用' . $itemName . '喂食成功';
+        }
+
+        if ($action === 'bath') {
+            return '使用' . $itemName . '洗澡成功';
+        }
+
+        if ($action === 'play') {
+            return '使用' . $itemName . '玩耍成功';
+        }
+
+        return '使用' . $itemName . '成功';
     }
 
     /**

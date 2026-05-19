@@ -62,24 +62,22 @@ class PetService
      * 执行宠物操作。
      *
      * $action 当前支持：
-     * - feed：喂食，提升 hunger。
-     * - bath：洗澡，提升 clean_value。
-     * - play：玩耍，提升 mood。
+     * - feed：喂食，必须消耗 food 类型背包商品。
+     * - bath：洗澡，必须消耗 clean 类型背包商品。
+     * - play：玩耍，必须消耗 toy 类型背包商品。
      *
-     * 操作流程：
-     * 1. 确保用户和宠物存在。
-     * 2. 根据操作类型找到配置。
-     * 3. 优先消耗背包道具。
-     * 4. 背包没有道具时，扣金币。
-     * 5. 增加对应宠物状态。
-     * 6. 增加宠物经验，并处理升级。
-     * 7. 推进每日任务进度。
+     * 现在宠物状态不再使用固定加值，
+     * 而是根据背包商品里的属性快照增加：
+     * - hunger_value
+     * - clean_value
+     * - mood_value
+     * - exp_value
      */
     public function action(int $userId, string $action): array
     {
         $user = $this->repository->findUser($userId);
         if (!$user) {
-            $user = $this->repository->createDefaultUser($userId);
+            $this->repository->createDefaultUser($userId);
         }
 
         // getPet() 内部会顺手处理状态衰减，所以这里拿到的是已经更新过状态的宠物数据。
@@ -92,80 +90,36 @@ class PetService
             ];
         }
 
-        // 从配置表里读取本次操作影响哪个状态，以及增加多少。
-        // 例如 feed => hunger + 1。
-        $config = $this->config['pet_actions'][$action] ?? null;
+        $consumeMap = [
+            'feed' => 'food',
+            'bath' => 'clean',
+            'play' => 'toy',
+        ];
 
-        if (!$config) {
+        $itemType = $consumeMap[$action] ?? null;
+
+        if (!$itemType) {
             return $pet;
         }
 
-        // 消耗配置：每种操作优先使用背包道具；没有道具时再扣金币。
-        // feed 对应 food，道具不存在时扣 10 金币。
-        // bath 对应 clean，道具不存在时扣 15 金币。
-        // play 对应 toy，道具不存在时扣 20 金币。
-        $consumeMap = [
-            'feed' => [
-                'item_type' => 'food',
-                'coin_cost' => 10,
-            ],
-            'bath' => [
-                'item_type' => 'clean',
-                'coin_cost' => 15,
-            ],
-            'play' => [
-                'item_type' => 'toy',
-                'coin_cost' => 20,
-            ],
-        ];
+        $bagItem = $this->repository->findUsableBagItemByType($userId, $itemType);
 
-        $consumeConfig = $consumeMap[$action] ?? null;
-
-        if ($consumeConfig) {
-            $bagItem = $this->repository->findUsableBagItemByType(
-                $userId,
-                $consumeConfig['item_type']
-            );
-
-            if ($bagItem) {
-                // 有可用道具：消耗 1 个背包物品。
-                $this->repository->consumeBagItem((int) $bagItem['id']);
-            } else {
-                // 没有可用道具：改为扣金币。
-                $newCoin = (int) $user['coin'] - (int) $consumeConfig['coin_cost'];
-
-                if ($newCoin < 0) {
-                    return [
-                        'error' => true,
-                        'message' => '金币不足',
-                    ];
-                }
-
-                $this->repository->updateUser($userId, [
-                    'coin' => $newCoin,
-                ]);
-
-                $user['coin'] = $newCoin;
-            }
+        if (!$bagItem) {
+            return [
+                'error' => true,
+                'message' => $this->getMissingItemMessage($action),
+            ];
         }
 
-        // 配置里为了更接近前端语义，bath 写的是 clean。
-        // 但是数据库字段名叫 clean_value，所以这里统一转换。
-        $field = $config['field'];
-        if ($field === 'clean') {
-            $field = 'clean_value';
-        }
+        // 有可用商品：消耗 1 个背包物品。
+        $this->repository->consumeBagItem((int) $bagItem['id']);
 
-        // 增加对应状态，并限制最大值不超过 max_status_value。
-        // 例如当前 hunger=99，喂食 +1，最高也只能到 100。
-        $newValue = min(
-            (int) $pet[$field] + (int) $config['value'],
-            (int) $this->config['max_status_value']
-        );
+        $maxStatusValue = (int) $this->config['max_status_value'];
+        $newHunger = min((int) $pet['hunger'] + (int) ($bagItem['hunger_value'] ?? 0), $maxStatusValue);
+        $newCleanValue = min((int) $pet['clean_value'] + (int) ($bagItem['clean_value'] ?? 0), $maxStatusValue);
+        $newMood = min((int) $pet['mood'] + (int) ($bagItem['mood_value'] ?? 0), $maxStatusValue);
 
-        // 每次操作成功，宠物获得经验。
-        // 当前经验达到 pet_level_exp_base 后自动升级，并保留多余经验。
-        $newExp = (int) $pet['exp'] + (int) $this->config['pet_action_reward_exp'];
+        $newExp = (int) $pet['exp'] + (int) ($bagItem['exp_value'] ?? 0);
         $newLevel = (int) $pet['level'];
         $levelExpBase = max((int) $this->config['pet_level_exp_base'], 1);
 
@@ -175,7 +129,9 @@ class PetService
         }
 
         $this->repository->updatePet((int) $pet['id'], [
-            $field => $newValue,
+            'hunger' => $newHunger,
+            'clean_value' => $newCleanValue,
+            'mood' => $newMood,
             'exp' => $newExp,
             'level' => $newLevel,
         ]);
@@ -186,6 +142,23 @@ class PetService
 
         // 重新读取宠物信息，让前端拿到最新状态、等级和经验。
         return $this->getPet($userId);
+    }
+
+    private function getMissingItemMessage(string $action): string
+    {
+        if ($action === 'feed') {
+            return '背包里没有可用食物，请先去商城购买';
+        }
+
+        if ($action === 'bath') {
+            return '背包里没有可用清洁用品，请先去商城购买';
+        }
+
+        if ($action === 'play') {
+            return '背包里没有可用玩具，请先去商城购买';
+        }
+
+        return '背包里没有可用物品';
     }
 
     /**

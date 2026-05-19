@@ -43,9 +43,14 @@ CREATE TABLE `pet_shop_goods` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '商品ID',
   `goods_name` VARCHAR(100) NOT NULL COMMENT '商品名称',
   `goods_type` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '商品类型：food/clean/toy',
+  `description` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品描述',
   `price_coin` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '金币价格',
   `price_diamond` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '钻石价格',
   `item_count` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '购买后获得数量',
+  `hunger_value` INT NOT NULL DEFAULT 0 COMMENT '使用后增加的饥饿值',
+  `clean_value` INT NOT NULL DEFAULT 0 COMMENT '使用后增加的清洁值',
+  `mood_value` INT NOT NULL DEFAULT 0 COMMENT '使用后增加的心情值',
+  `exp_value` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '使用后增加的宠物经验',
   `icon` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品图标',
   `status` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '1=上架 0=下架',
   `sort` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序值',
@@ -59,10 +64,14 @@ CREATE TABLE `pet_shop_goods` (
 CREATE TABLE `pet_bag_items` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '背包记录ID',
   `user_id` INT UNSIGNED NOT NULL COMMENT '用户ID',
-  `item_id` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品ID，来源商城或配置',
+  `item_id` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品ID，来源商城商品 pet_shop_goods.id',
   `item_name` VARCHAR(100) NOT NULL COMMENT '物品名称',
   `item_type` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '物品类型：food/clean/toy',
   `item_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品数量',
+  `hunger_value` INT NOT NULL DEFAULT 0 COMMENT '使用后增加的饥饿值',
+  `clean_value` INT NOT NULL DEFAULT 0 COMMENT '使用后增加的清洁值',
+  `mood_value` INT NOT NULL DEFAULT 0 COMMENT '使用后增加的心情值',
+  `exp_value` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '使用后增加的宠物经验',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
@@ -121,7 +130,17 @@ INSERT INTO `pet_tasks` (`id`, `title`, `task_type`, `target_value`, `reward_coi
 (3, '玩耍 1 次', 'play', 1, 20, 5, 1, 30),
 (4, '每日签到 1 次', 'sign', 1, 30, 5, 1, 40);
 
-INSERT INTO `pet_shop_goods` (`id`, `goods_name`, `goods_type`, `price_coin`, `price_diamond`, `item_count`, `icon`, `status`, `sort`) VALUES
-(101, '高级猫粮', 'food', 30, 0, 1, '', 1, 10),
-(102, '香氛沐浴露', 'clean', 40, 0, 1, '', 1, 20),
-(103, '逗猫棒', 'toy', 50, 0, 1, '', 1, 30);
+-- 商城商品重新规划：三类商品 food / clean / toy，每类 3 个。
+-- 后续宠物操作不再直接固定加值，而是根据商品属性增加 hunger / clean_value / mood / exp。
+INSERT INTO `pet_shop_goods` (`id`, `goods_name`, `goods_type`, `description`, `price_coin`, `price_diamond`, `item_count`, `hunger_value`, `clean_value`, `mood_value`, `exp_value`, `icon`, `status`, `sort`) VALUES
+(101, '小鱼干', 'food', '基础食物，少量恢复饥饿值', 20, 0, 1, 10, 0, 1, 1, '', 1, 10),
+(102, '高级猫粮', 'food', '营养更高，恢复更多饥饿值', 30, 0, 1, 18, 0, 2, 2, '', 1, 20),
+(103, '豪华罐头', 'food', '高级食物，大幅恢复饥饿值', 50, 0, 1, 30, 0, 5, 4, '', 1, 30),
+
+(201, '沐浴露', 'clean', '基础清洁用品，少量恢复清洁值', 20, 0, 1, 0, 10, 1, 1, '', 1, 110),
+(202, '香氛沐浴露', 'clean', '香香的沐浴露，恢复清洁并提升心情', 40, 0, 1, 0, 20, 4, 2, '', 1, 120),
+(203, 'SPA护理套装', 'clean', '高级护理用品，大幅恢复清洁和心情', 70, 0, 1, 0, 35, 8, 5, '', 1, 130),
+
+(301, '玩具球', 'toy', '基础玩具，少量提升心情', 20, 0, 1, 0, 0, 10, 1, '', 1, 210),
+(302, '逗猫棒', 'toy', '猫咪喜欢的玩具，明显提升心情', 50, 0, 1, 0, 0, 25, 3, '', 1, 220),
+(303, '激光笔', 'toy', '高级互动玩具，大幅提升心情', 80, 0, 1, 0, 0, 40, 6, '', 1, 230);

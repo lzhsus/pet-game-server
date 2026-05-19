@@ -37,11 +37,11 @@ return [
     // 宠物状态最大值。hunger / clean_value / mood 都不会超过这个值。
     'max_status_value' => 100,
 
-    // 状态衰减周期，单位：分钟。1 表示每 1 分钟衰减一次。
-    'status_decay_minutes' => 1,
+    // 状态衰减周期，单位：分钟。180 表示每 3 小时衰减一次。
+    'status_decay_minutes' => 180,
 
     // 每个衰减周期内，三个状态分别下降多少。
-    // 例：status_decay_minutes = 1，hunger = 5，表示每分钟饥饿值减少 5。
+    // 例：status_decay_minutes = 180，hunger = 5，表示每 3 小时饥饿值减少 5。
     'status_decay_values' => [
         'hunger' => 5,
         'clean_value' => 3,

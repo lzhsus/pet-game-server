@@ -131,18 +131,25 @@ class MySqlGameRepository
         return $stmt->fetchAll();
     }
 
-    public function addBagItem(int $userId, int $itemId, string $name, string $type, int $count = 1): void
+    public function addBagItem(int $userId, array $goods, int $count = 1): void
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO pet_bag_items (user_id, item_id, item_name, item_type, item_count) VALUES (:user_id, :item_id, :item_name, :item_type, :item_count)'
+            'INSERT INTO pet_bag_items
+                (user_id, item_id, item_name, item_type, item_count, hunger_value, clean_value, mood_value, exp_value)
+             VALUES
+                (:user_id, :item_id, :item_name, :item_type, :item_count, :hunger_value, :clean_value, :mood_value, :exp_value)'
         );
 
         $stmt->execute([
             'user_id' => $userId,
-            'item_id' => $itemId,
-            'item_name' => $name,
-            'item_type' => $type,
+            'item_id' => (int) $goods['id'],
+            'item_name' => (string) $goods['goods_name'],
+            'item_type' => (string) $goods['goods_type'],
             'item_count' => $count,
+            'hunger_value' => (int) ($goods['hunger_value'] ?? 0),
+            'clean_value' => (int) ($goods['clean_value'] ?? 0),
+            'mood_value' => (int) ($goods['mood_value'] ?? 0),
+            'exp_value' => (int) ($goods['exp_value'] ?? 0),
         ]);
     }
 
